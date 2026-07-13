@@ -66,7 +66,23 @@ Sin backend ni cuenta de servicio, prueba solo la interfaz con el modo simulado:
 DEMO_MOCK=true npm run dev
 ```
 
-## Docker
+## Despliegue
+
+La misma base de código se despliega en tres destinos. En todos, la configuración (incluida la clave
+de la cuenta de servicio) se define en el entorno de la plataforma, nunca en el repositorio.
+
+### Netlify
+
+Conecta el repositorio en Netlify; `netlify.toml` ya declara el build y el adaptador de Next
+(`@netlify/plugin-nextjs`), que sirve las rutas `app/api/*` como funciones. Define las variables de
+entorno en *Site settings → Environment variables* (ver `.env.example`).
+
+### Vercel
+
+Importa el repositorio en Vercel; se detecta como Next.js (`vercel.json`). Define las variables de
+entorno del proyecto en el panel. No requiere configuración adicional.
+
+### Docker (cualquier host / Kubernetes)
 
 ```bash
 docker build -t blerify-verification-demo .
@@ -74,4 +90,10 @@ docker run --env-file .env -p 8080:8080 blerify-verification-demo
 ```
 
 La imagen es genérica: ninguna regla, organización ni clave se hornea en ella; todo se inyecta por
-entorno en tiempo de ejecución.
+entorno en tiempo de ejecución. El `Dockerfile` construye con `output: 'standalone'`
+(`BUILD_STANDALONE=true`); Netlify y Vercel dejan esa variable sin definir y usan su propio adaptador.
+
+## Integración continua
+
+`.github/workflows/ci.yml` valida en cada push y pull request que el proyecto compila
+(`typecheck` + `build`) y que la imagen Docker se construye. No despliega ni requiere secretos.

@@ -1,0 +1,17 @@
+# Despliegue en Netlify. El adaptador oficial de Next (@netlify/plugin-nextjs) sirve las rutas
+# app/api/* como funciones, así que el BFF funciona igual que en Node. NO se usa la salida
+# "standalone" (esa es solo para la imagen Docker); aquí BUILD_STANDALONE queda sin definir.
+#
+# IMPORTANTE: configura las variables de entorno del servicio en el panel de Netlify
+# (Site settings → Environment variables): BLERIFY_API_URL, ORG_ID, PROJECT_ID, RULE_ID,
+# WALLET_BASE_URL, SA_CLIENT_ID, SA_PRIVATE_KEY, SA_IAM_AUDIENCE. Ver .env.example.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

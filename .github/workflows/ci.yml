@@ -1,0 +1,36 @@
+name: CI
+
+# Integración continua: valida que el proyecto compila (typecheck + build) y que la imagen
+# Docker se construye. NO despliega a ninguna infraestructura ni requiere secretos.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Typecheck y build (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Build por defecto (sin standalone): el mismo que usan Netlify/Vercel.
+      - run: npm run build
+
+  docker:
+    name: Build de la imagen Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Valida el Dockerfile (build standalone). No publica la imagen.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false

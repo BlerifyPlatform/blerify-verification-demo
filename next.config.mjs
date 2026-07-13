@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Servicio Node en un pod (GKE): build "standalone" → imagen liviana que corre con `node server.js`.
-  // Las rutas app/api/* actúan de BFF (callback OIDC4VP + cuenta de servicio); el navegador nunca ve secretos.
-  output: 'standalone',
+  // `output: 'standalone'` (imagen Docker que corre con `node server.js`) SOLO cuando se construye
+  // para contenedor: el Dockerfile fija BUILD_STANDALONE=true. En Netlify/Vercel se deja sin definir
+  // para que cada plataforma use su propio adaptador de Next (que no usa la salida standalone).
+  // Las rutas app/api/* actúan de BFF (flujo OIDC4VP + cuenta de servicio); el navegador nunca ve secretos.
+  output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
   trailingSlash: true,
   images: { unoptimized: true },
   // Las rutas /api/* son un BFF dinámico (polling de estado, callback OIDC4VP). NUNCA deben cachearse:

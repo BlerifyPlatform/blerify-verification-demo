@@ -16,7 +16,10 @@ FROM node:20.9.0-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+# Construye la salida standalone (server.js) para la imagen. En Netlify/Vercel esta variable
+# no se define y cada plataforma usa su propio adaptador. Ver next.config.mjs.
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    BUILD_STANDALONE=true
 RUN npm run build
 
 FROM node:20.9.0-alpine AS runner
