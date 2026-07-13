@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.git
+.github
+npm-debug.log*
+Dockerfile
+.dockerignore
+docker-compose*.yml
+README.md
+# Nunca copiar archivos de entorno al contexto de build (evita filtrar secretos en la imagen).
+.env
+.env.*
+!.env.example
