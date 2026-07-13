@@ -44,11 +44,76 @@ wallet ── escanea el QR (o abre el deep link) y presenta la credencial ─�
 | `app/api/_lib/mock.ts` | Modo demostración sin backend (`DEMO_MOCK=true`). |
 | `app/components/VerificationPanel.tsx` | Interfaz del flujo (QR / botón / resultado). |
 
+## Prerrequisitos en el portal de Blerify
+
+Antes de configurar el servicio necesitas dos cosas creadas en el portal de Blerify: una **regla de
+verificación publicada** (de donde sale `RULE_ID`) y una **cuenta de servicio** (de donde salen las
+variables `SA_*`). La cuenta de servicio conviene crearla primero, porque el último paso del
+asistente de la regla te pedirá seleccionarla.
+
+### 1. Crear la cuenta de servicio
+
+La cuenta de servicio autentica al BFF máquina a máquina (OAuth2 `private_key_jwt`, RS256). Se
+gestiona a nivel de organización y requiere el rol de propietario o administrador de la organización.
+
+1. En el portal, ve a **Organización → Cuentas de servicio** y pulsa **«Crear cuenta de servicio»**.
+2. Completa el formulario:
+   - **Nombre** y **Descripción**.
+   - **Algoritmo de firma**: `RS256` (RSA con SHA-256), la única opción.
+   - **Roles**: selecciona **«Verificaciones»** (este rol habilita iniciar y consultar
+     verificaciones a través de los endpoints v2 autenticados).
+   - **Proyecto**: como el rol de verificaciones está acotado a un proyecto, elige el **proyecto de
+     verificación** donde vive (o vivirá) tu regla.
+3. Pulsa **Crear**. El portal genera el par de claves y te ofrece **descargar un archivo JSON**
+   (`service-account-<client_id>.json`).
+4. **Descarga y guarda ese archivo en un lugar seguro: la clave privada se muestra una sola vez y no
+   se puede volver a descargar.** (El botón de cerrar permanece deshabilitado hasta que descargas.)
+
+Del JSON descargado salen, tal cual, las variables del servicio:
+
+| Campo del JSON | Variable de entorno |
+|----------------|---------------------|
+| `client_id` | `SA_CLIENT_ID` |
+| `private_key` | `SA_PRIVATE_KEY` (PEM PKCS#8, RSA-2048) |
+| `iam_audience` | `SA_IAM_AUDIENCE` |
+| `token_uri` | `SA_TOKEN_URI` (opcional; por defecto `${BLERIFY_API_URL}/auth/v2/protocol/openid-connect/token`) |
+| `organization_id` | `SA_ORGANIZATION_ID` (opcional; por defecto = `ORG_ID`) |
+
+### 2. Crear y publicar la regla de verificación
+
+La regla («PresentationVerification») define qué credenciales y atributos se solicitan y cómo se
+validan. Vive dentro de un **proyecto de categoría «verificación»**.
+
+1. Entra al proyecto de verificación y abre **«Reglas de Verificación»** en el menú del proyecto;
+   pulsa **«Nueva regla»**.
+2. Elige el **nivel de verificación** y luego las **credenciales** que aceptarás. Se abre el
+   asistente de cinco pasos:
+   1. **Información** — nombre de la regla, código interno, descripción y tipo.
+   2. **Atributos y pruebas** — qué atributos de cada credencial se solicitan.
+   3. **Verificaciones** — validaciones a aplicar y el transporte (**OpenID4VP**).
+   4. **Listas de sanciones** — listas de control (opcional).
+   5. **Integración técnica** — seleccionas la **cuenta de servicio** (la del paso anterior), el modo
+      (API/SDK) y el flujo; aquí se generan el identificador y los fragmentos de código.
+3. En el paso **«Integración técnica»** pulsa **«Generar ID»** (la regla se guarda como borrador) y
+   luego **«Publicar regla»** para pasarla a estado **ACTIVE**. Solo una regla publicada es utilizable.
+
+**De dónde sale `RULE_ID`:** es el **UUID de la regla**, que aparece en ese paso 5 bajo la etiqueta
+**«ID de la regla»**, con botón de copiar. Cópialo ahí mismo.
+
+> ⚠️ No lo confundas con el **«ID de verificación»** que se muestra en la pantalla de *detalle* de la
+> regla (un código con formato `ver_…`): ese **no** es el valor que espera este servicio. `RULE_ID`
+> es el UUID de «ID de la regla» del paso de integración.
+
+**`ORG_ID` y `PROJECT_ID`:** son los identificadores de tu organización y del proyecto de
+verificación. La forma más simple de obtener los tres a la vez es mirar los fragmentos de código del
+mismo paso «Integración técnica», donde la URL incrusta
+`…/organizations/{ORG_ID}/projects/{PROJECT_ID}/verifications/{RULE_ID}`.
+
 ## Configuración (variables de entorno — lado servidor)
 
 Toda la configuración es de ejecución; ver `.env.example`. Lo esencial:
 
-- `BLERIFY_API_URL`, `ORG_ID`, `PROJECT_ID`, `RULE_ID`, `WALLET_BASE_URL`
+- `BLERIFY_API_URL`, `ORG_ID`, `PROJECT_ID`, `RULE_ID`, `WALLET_BASE_URL` (ver «Prerrequisitos» arriba).
 - Cuenta de servicio (flujo real): `SA_CLIENT_ID`, `SA_PRIVATE_KEY` (RS256 / PKCS#8), `SA_IAM_AUDIENCE`
   y, opcionalmente, `SA_TOKEN_URI`, `SA_ORGANIZATION_ID`.
 
