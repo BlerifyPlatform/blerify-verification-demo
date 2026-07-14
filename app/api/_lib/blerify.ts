@@ -90,7 +90,14 @@ export async function pollVerification(transactionId: string): Promise<PollResul
 // Aserción firmada RS256 (RSA-2048, PKCS#8 PEM). Body que espera Blerify: SOLO client_id,
 // organization_id, client_assertion (grant_type/assertion_type los agrega el servicio auth).
 const SA_CLIENT_ID = process.env.SA_CLIENT_ID ?? '';
-const SA_PRIVATE_KEY = process.env.SA_PRIVATE_KEY ?? ''; // PKCS#8 PEM (RSA-2048)
+// PKCS#8 PEM (RSA-2048). Se normaliza porque las plataformas de env vars (Netlify/Vercel/Docker) no
+// hacen lo que dotenv hace en local: guardan el valor literal. Aceptamos la clave en una sola línea
+// con `\n` escapados y/o entre comillas, y la volvemos un PEM con saltos de línea REALES, que es lo
+// que exige jose.importPKCS8 (si no, lanza: "pkcs8" must be PKCS#8 formatted string).
+const SA_PRIVATE_KEY = (process.env.SA_PRIVATE_KEY ?? '')
+  .trim()
+  .replace(/^["']|["']$/g, '')
+  .replace(/\\n/g, '\n');
 const SA_TOKEN_URI = process.env.SA_TOKEN_URI ?? `${API_URL}/auth/v2/protocol/openid-connect/token`;
 const SA_IAM_AUDIENCE = process.env.SA_IAM_AUDIENCE ?? ''; // https://iam.../realms/{orgId}
 const SA_ORG_ID = process.env.SA_ORGANIZATION_ID ?? OID;
