@@ -57,6 +57,31 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+// Some claims (e.g. `portrait`, `signature_usual_mark`) arrive as a hex-encoded image — an ISO mDL
+// byte string serialized to hex. Detect the image by its magic bytes and turn it into a data: URI so
+// it renders as a picture instead of a wall of hex. Returns null for anything that isn't such an image.
+function imageDataUri(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const hex = value.trim().toLowerCase();
+  if (hex.length < 8 || hex.length % 2 !== 0 || !/^[0-9a-f]+$/.test(hex)) return null;
+  let mime: string | null = null;
+  if (hex.startsWith('ffd8ff')) mime = 'image/jpeg';
+  else if (hex.startsWith('89504e47')) mime = 'image/png';
+  else if (hex.startsWith('0000000c6a502020')) mime = 'image/jp2';
+  if (!mime) return null;
+  try {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    let bin = '';
+    bytes.forEach((b) => {
+      bin += String.fromCharCode(b);
+    });
+    return `data:${mime};base64,${btoa(bin)}`;
+  } catch {
+    return null;
+  }
+}
+
 // --- Iconos ------------------------------------------------------------------
 
 function SvgCheck() {
@@ -204,12 +229,20 @@ export default function VerificationPanel() {
 
         {claimKeys.length > 0 && (
           <div className="claims">
-            {claimKeys.map((k) => (
-              <div className="claim" key={k}>
-                <div className="k">{label(k)}</div>
-                <div className="val">{formatValue(c.claims[k])}</div>
-              </div>
-            ))}
+            {claimKeys.map((k) => {
+              const img = imageDataUri(c.claims[k]);
+              return (
+                <div className="claim" key={k}>
+                  <div className="k">{label(k)}</div>
+                  {img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="claim-img" src={img} alt={label(k)} />
+                  ) : (
+                    <div className="val">{formatValue(c.claims[k])}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
