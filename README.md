@@ -114,6 +114,7 @@ mismo paso «Integración técnica», donde la URL incrusta
 Toda la configuración es de ejecución; ver `.env.example`. Lo esencial:
 
 - `BLERIFY_API_URL`, `ORG_ID`, `PROJECT_ID`, `RULE_ID`, `WALLET_BASE_URL` (ver «Prerrequisitos» arriba).
+  - En **staging** los hosts siguen el patrón `<servicio>.staging.blerify.com`: usa `BLERIFY_API_URL=https://api.staging.blerify.com` (subdominios en ese orden — **no** `staging.api.blerify.com`, ese error hace que las llamadas fallen) y `SA_IAM_AUDIENCE=https://iam.staging.blerify.com/realms/{orgId}`.
 - Cuenta de servicio (flujo real): `SA_CLIENT_ID`, `SA_PRIVATE_KEY` (RS256 / PKCS#8), `SA_IAM_AUDIENCE`
   y, opcionalmente, `SA_TOKEN_URI`, `SA_ORGANIZATION_ID`.
 
