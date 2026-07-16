@@ -135,7 +135,20 @@ function SvgDot() {
 
 // --- Componente principal ----------------------------------------------------
 
-export default function VerificationPanel() {
+// `apiBase` permite montar el MISMO panel sobre otro par de rutas del BFF (p.ej. /api/w3c para la
+// regla W3C); los textos de cabecera se ajustan por props con los valores por defecto del flujo
+// principal.
+export default function VerificationPanel({
+  apiBase = '/api',
+  title = 'Verifica tu identidad',
+  subtitle = 'Presenta una credencial digital desde tu billetera',
+  credentialHint = 'Necesitas una credencial de identidad en tu billetera digital.',
+}: {
+  apiBase?: string;
+  title?: string;
+  subtitle?: string;
+  credentialHint?: string;
+} = {}) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [credential, setCredential] = useState<VerifiedCredential | null>(null);
   const [qr, setQr] = useState<string | null>(null);
@@ -165,7 +178,7 @@ export default function VerificationPanel() {
     setLink(null);
     setShowQr(false);
     try {
-      const res = await fetch('/api/start', { method: 'POST' });
+      const res = await fetch(`${apiBase}/start`, { method: 'POST' });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `Error ${res.status}`);
@@ -179,7 +192,7 @@ export default function VerificationPanel() {
       pollRef.current = setInterval(async () => {
         // Cache-buster (`_`): cada poll es una URL única → evita que cualquier capa (Next server
         // cache, navegador o CDN) sirva una respuesta `pending` cacheada sin llegar al backend.
-        const s = await fetch(`/api/status?transactionId=${encodeURIComponent(data.transactionId)}&_=${Date.now()}`, { cache: 'no-store' })
+        const s = await fetch(`${apiBase}/status?transactionId=${encodeURIComponent(data.transactionId)}&_=${Date.now()}`, { cache: 'no-store' })
           .then((r) => r.json())
           .catch(() => null);
         if (s?.status === 'verified') {
@@ -199,7 +212,7 @@ export default function VerificationPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiBase]);
 
   const reset = () => {
     clearPoll();
@@ -216,8 +229,8 @@ export default function VerificationPanel() {
     <div className="panel-head">
       <span className="ph-icon"><SvgShield /></span>
       <div>
-        <h2>Verifica tu identidad</h2>
-        <p>Presenta una credencial digital desde tu billetera</p>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
       </div>
     </div>
   );
@@ -381,7 +394,7 @@ export default function VerificationPanel() {
         {loading ? <><span className="spinner light" /> Generando…</> : 'Iniciar verificación'}
       </button>
       {error && <div className="alert-err">{error}</div>}
-      <p className="scan-hint center">Necesitas una credencial de identidad en tu billetera digital.</p>
+      <p className="scan-hint center">{credentialHint}</p>
     </div>
   );
 }

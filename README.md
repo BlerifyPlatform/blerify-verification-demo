@@ -45,10 +45,13 @@ wallet ── escanea el QR (o abre el deep link) y presenta la credencial ─�
 |------|-----|
 | `app/api/start/route.ts` | Inicia la verificación; devuelve `transaction_id`, QR y deep link. |
 | `app/api/status/route.ts` | Sondeo: poll + verify; devuelve el resultado y los atributos. |
-| `app/api/_lib/blerify.ts` | Cliente OIDC4VP v2 + token de la cuenta de servicio. |
+| `app/api/w3c/{start,status}/route.ts` | Igual que los anteriores pero sobre la regla W3C (`W3C_RULE_ID`); sin mock. |
+| `app/api/_lib/blerify.ts` | Cliente OIDC4VP v2 + token de la cuenta de servicio (flows `default` y `w3c`). |
+| `app/api/_lib/extract.ts` | Envelope v2 → credencial genérica (claims + validación + `documentImages`). |
 | `app/api/_lib/store.ts` | Estado por `transaction_id` (en memoria; una réplica). |
 | `app/api/_lib/mock.ts` | Modo demostración sin backend (`DEMO_MOCK=true`). |
-| `app/components/VerificationPanel.tsx` | Interfaz del flujo (QR / botón / resultado). |
+| `app/components/VerificationPanel.tsx` | Interfaz del flujo (QR / botón / resultado), reutilizable vía `apiBase`. |
+| `app/w3c/page.tsx` | Página de prueba de la regla W3C con DCQL (usa el mismo panel sobre `/api/w3c`). |
 
 ## Prerrequisitos en el portal de Blerify
 

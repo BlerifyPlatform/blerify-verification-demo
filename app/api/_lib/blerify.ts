@@ -3,19 +3,55 @@
 // La wallet, que escanea el QR y no tiene el token, baja el authorization request y presenta por los
 // endpoints PÚBLICOS v1 (el JAR ya trae el response_uri público). El poll v2 (/response) hace
 // poll + verify en una sola llamada y devuelve {status: PENDING|COMPLETED, credentials:[...]}.
+//
+// Soporta DOS reglas por "flow":
+//   - 'default' → la regla principal del ejemplo (ORG_ID / PROJECT_ID / RULE_ID).
+//   - 'w3c'     → regla de tipo W3C con DCQL para la ruta /w3c (W3C_RULE_ID; ORG/PROJECT caen a los
+//                 del flujo default si no se definen — la regla W3C suele ser otra del mismo proyecto).
+// La cuenta de servicio (token) es por organización: si la regla W3C está en la MISMA org (caso
+// normal), la misma SA sirve. Si viviera en otra org habría que añadir una SA aparte.
 import { SignJWT, importPKCS8 } from 'jose';
 import { randomUUID } from 'crypto';
 
 const API_URL = (process.env.BLERIFY_API_URL ?? 'https://api.blerify.com').replace(/\/$/, '');
-const OID = process.env.ORG_ID ?? '';
-const PID = process.env.PROJECT_ID ?? '';
-const VID = process.env.RULE_ID ?? ''; // id de la PresentationVerification (regla publicada/ACTIVE)
-const WALLET_BASE = process.env.WALLET_BASE_URL ?? 'https://wallet.blerify.com/production/';
+
+export type Flow = 'default' | 'w3c';
+
+interface RuleCfg {
+  oid: string;
+  pid: string;
+  vid: string;
+  walletBase: string;
+}
+
+// Config de regla + wallet por flujo. Para 'w3c' solo W3C_RULE_ID es obligatorio; el resto cae a
+// los valores del flujo default para no duplicar configuración cuando es el mismo proyecto/wallet.
+function ruleCfg(flow: Flow): RuleCfg {
+  const defaultWallet = process.env.WALLET_BASE_URL ?? 'https://wallet.blerify.com/production/';
+  if (flow === 'w3c') {
+    return {
+      oid: process.env.W3C_ORG_ID ?? process.env.ORG_ID ?? '',
+      pid: process.env.W3C_PROJECT_ID ?? process.env.PROJECT_ID ?? '',
+      vid: process.env.W3C_RULE_ID ?? '',
+      walletBase: process.env.W3C_WALLET_BASE_URL ?? defaultWallet,
+    };
+  }
+  return {
+    oid: process.env.ORG_ID ?? '',
+    pid: process.env.PROJECT_ID ?? '',
+    vid: process.env.RULE_ID ?? '', // id de la PresentationVerification (regla publicada/ACTIVE)
+    walletBase: defaultWallet,
+  };
+}
 
 // v2 client (autenticado, lo usa el verificador): init + poll(+verify).
-const BASE_V2 = `${API_URL}/client/api/v2/openid4vp/organizations/${OID}/projects/${PID}/verifications/${VID}`;
+function baseV2(c: RuleCfg): string {
+  return `${API_URL}/client/api/v2/openid4vp/organizations/${c.oid}/projects/${c.pid}/verifications/${c.vid}`;
+}
 // v1 público (lo usa la WALLET): de aquí baja el authorization request firmado.
-const BASE_PUB = `${API_URL}/public/api/v1/openid4vp/organizations/${OID}/projects/${PID}/verifications/${VID}`;
+function basePub(c: RuleCfg): string {
+  return `${API_URL}/public/api/v1/openid4vp/organizations/${c.oid}/projects/${c.pid}/verifications/${c.vid}`;
+}
 
 export interface Session {
   request_id: string;
@@ -50,8 +86,14 @@ export interface PollResult {
   [k: string]: unknown;
 }
 
-function assertConfig(): void {
-  if (!OID || !PID || !VID) throw new Error('Faltan ORG_ID / PROJECT_ID / RULE_ID');
+function assertConfig(c: RuleCfg, flow: Flow): void {
+  if (!c.oid || !c.pid || !c.vid) {
+    throw new Error(
+      flow === 'w3c'
+        ? 'Regla W3C sin configurar: falta W3C_RULE_ID (y W3C_ORG_ID / W3C_PROJECT_ID si difieren del flujo por defecto)'
+        : 'Faltan ORG_ID / PROJECT_ID / RULE_ID',
+    );
+  }
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -59,9 +101,10 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 /** Inicia una sesión de verificación (v2, autenticado con el SA). Devuelve transaction_id + request_id. */
-export async function createSession(): Promise<Session> {
-  assertConfig();
-  const res = await fetch(BASE_V2, {
+export async function createSession(flow: Flow = 'default'): Promise<Session> {
+  const c = ruleCfg(flow);
+  assertConfig(c, flow);
+  const res = await fetch(baseV2(c), {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify({ nonce: randomUUID() }),
@@ -75,19 +118,21 @@ export async function createSession(): Promise<Session> {
  * la wallet (sin el token del SA) baja ahí el authorization request firmado por el backend
  * (managed ISO signing). El response_uri (a dónde presenta) ya viaja dentro de ese JAR.
  */
-export function buildWalletLink(s: Session): string {
-  const qs = new URLSearchParams({ request_uri: `${BASE_PUB}/request/${s.request_id}` });
+export function buildWalletLink(s: Session, flow: Flow = 'default'): string {
+  const c = ruleCfg(flow);
+  const qs = new URLSearchParams({ request_uri: `${basePub(c)}/request/${s.request_id}` });
   if (s.client_id) qs.set('client_id', s.client_id);
   if (s.client_id_scheme) qs.set('client_id_scheme', s.client_id_scheme);
   if (s.request_uri_method) qs.set('request_uri_method', s.request_uri_method);
-  return `${WALLET_BASE}?${qs.toString()}`;
+  return `${c.walletBase}?${qs.toString()}`;
 }
 
 /** Poll v2 (autenticado): poll + verify en una llamada. PENDING hasta que la wallet presenta; luego COMPLETED. */
-export async function pollVerification(transactionId: string): Promise<PollResult> {
+export async function pollVerification(transactionId: string, flow: Flow = 'default'): Promise<PollResult> {
+  const c = ruleCfg(flow);
   // Cache-buster (`_`) + no-store: cada poll BFF→backend es una URL única. Sin esto, el CDN
   // (Cloudflare) cachea la primera respuesta `PENDING` y el BFF nunca ve el COMPLETED del backend.
-  const res = await fetch(`${BASE_V2}/response?transaction-id=${encodeURIComponent(transactionId)}&_=${Date.now()}`, {
+  const res = await fetch(`${baseV2(c)}/response?transaction-id=${encodeURIComponent(transactionId)}&_=${Date.now()}`, {
     headers: { authorization: `Bearer ${await getServiceAccountToken()}` },
     cache: 'no-store',
   });
@@ -109,7 +154,7 @@ const SA_PRIVATE_KEY = (process.env.SA_PRIVATE_KEY ?? '')
   .replace(/\\n/g, '\n');
 const SA_TOKEN_URI = process.env.SA_TOKEN_URI ?? `${API_URL}/auth/v2/protocol/openid-connect/token`;
 const SA_IAM_AUDIENCE = process.env.SA_IAM_AUDIENCE ?? ''; // https://iam.../realms/{orgId}
-const SA_ORG_ID = process.env.SA_ORGANIZATION_ID ?? OID;
+const SA_ORG_ID = process.env.SA_ORGANIZATION_ID ?? process.env.ORG_ID ?? '';
 
 let cachedToken: { value: string; exp: number } | null = null;
 
