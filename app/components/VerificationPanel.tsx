@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import DocumentFlipCard from './DocumentFlipCard';
 
 interface VerifiedCredential {
   issuer: string;
@@ -258,15 +259,26 @@ export default function VerificationPanel() {
         {(c.documentImages?.length ?? 0) > 0 && (
           <div className="doc-render">
             <div className="doc-render-title">Documento presentado</div>
-            <div className="doc-sides">
-              {c.documentImages!.map((img) => (
-                <figure className="doc-side" key={img.side || img.src.slice(-16)}>
+            {c.documentImages!.length > 1 ? (
+              // Anverso y reverso: una tarjeta que se voltea al tocarla.
+              <DocumentFlipCard
+                frontSrc={c.documentImages![0].src}
+                frontLabel={sideLabel(c.documentImages![0].side)}
+                backSrc={c.documentImages![1].src}
+                backLabel={sideLabel(c.documentImages![1].side)}
+              />
+            ) : (
+              <div className="doc-sides single">
+                <figure className="doc-side">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.src} alt={`${sideLabel(img.side)} del documento presentado`} />
-                  <figcaption>{sideLabel(img.side)}</figcaption>
+                  <img
+                    src={c.documentImages![0].src}
+                    alt={`${sideLabel(c.documentImages![0].side)} del documento presentado`}
+                  />
+                  <figcaption>{sideLabel(c.documentImages![0].side)}</figcaption>
                 </figure>
-              ))}
-            </div>
+              </div>
+            )}
             {c.documentRedaction === 'blur' && (
               <p className="doc-note">
                 La billetera entregó estas imágenes con los datos sensibles difuminados.

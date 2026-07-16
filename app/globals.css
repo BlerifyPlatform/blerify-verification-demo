@@ -180,6 +180,7 @@ html[data-theme='dark'] .qr-wait { color: #9cc4ee; }
 .doc-render { margin-bottom: 18px; text-align: left; }
 .doc-render-title { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
 .doc-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.doc-sides.single { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; }
 .doc-side { margin: 0; }
 .doc-side img {
   display: block; width: 100%; aspect-ratio: 8 / 5; object-fit: cover;
@@ -187,6 +188,23 @@ html[data-theme='dark'] .qr-wait { color: #9cc4ee; }
 }
 .doc-side figcaption { font-size: 12px; color: var(--muted); text-align: center; margin-top: 5px; }
 .doc-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+/* Tarjeta con volteo 3D (anverso ↔ reverso): perspectiva en el botón, preserve-3d en el
+   contenedor animado y las dos caras superpuestas con backface-visibility oculta. */
+.doc-flip-wrap { max-width: 320px; margin: 0 auto; }
+.doc-flip {
+  display: block; width: 100%; padding: 0; border: none; background: none;
+  cursor: pointer; perspective: 1000px;
+}
+.doc-flip-inner { position: relative; width: 100%; aspect-ratio: 8 / 5; transform-style: preserve-3d; }
+.doc-face {
+  position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.doc-face img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.doc-face-back { transform: rotateY(180deg); }
+.doc-flip-caption { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
 
 .checks { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
 .check {
