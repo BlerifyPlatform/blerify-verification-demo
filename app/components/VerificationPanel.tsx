@@ -9,6 +9,9 @@ interface VerifiedCredential {
   valid: boolean;
   validation: Record<string, unknown>;
   claims: Record<string, unknown>;
+  // Documento renderizado por la wallet (nivel STANDARD): anverso/reverso como data: URIs.
+  documentImages?: Array<{ side: string; src: string }>;
+  documentRedaction?: string;
 }
 
 interface StartResponse {
@@ -42,6 +45,12 @@ const LABELS: Record<string, string> = {
 function label(key: string): string {
   if (LABELS[key]) return LABELS[key];
   return key.replace(/[_.]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const SIDE_LABELS: Record<string, string> = { front: 'Anverso', back: 'Reverso' };
+
+function sideLabel(side: string): string {
+  return SIDE_LABELS[side] ?? label(side || 'documento');
 }
 
 function formatValue(value: unknown): string {
@@ -243,6 +252,26 @@ export default function VerificationPanel() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {(c.documentImages?.length ?? 0) > 0 && (
+          <div className="doc-render">
+            <div className="doc-render-title">Documento presentado</div>
+            <div className="doc-sides">
+              {c.documentImages!.map((img) => (
+                <figure className="doc-side" key={img.side || img.src.slice(-16)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.src} alt={`${sideLabel(img.side)} del documento presentado`} />
+                  <figcaption>{sideLabel(img.side)}</figcaption>
+                </figure>
+              ))}
+            </div>
+            {c.documentRedaction === 'blur' && (
+              <p className="doc-note">
+                La billetera entregó estas imágenes con los datos sensibles difuminados.
+              </p>
+            )}
           </div>
         )}
 

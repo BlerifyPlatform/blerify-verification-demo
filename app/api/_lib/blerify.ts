@@ -27,6 +27,14 @@ export interface Session {
   images?: { qrImage?: string };
 }
 
+// Evidencia del sideband de extensiones (nivel STANDARD, flujo ISO): la wallet entrega el
+// documento renderizado (anverso/reverso) y el backend lo expone en evidence.document_render.
+export interface DocumentRender {
+  format?: string; // MIME de las imágenes, p.ej. "image/jpeg"
+  redaction?: string; // p.ej. "blur" cuando la wallet difumina datos sensibles
+  images?: Array<{ side?: string; data?: string }>; // side: "front" | "back"; data: base64
+}
+
 // Respuesta del poll v2 (/response): poll + verify combinados.
 export interface PollResult {
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
@@ -38,6 +46,7 @@ export interface PollResult {
     result?: Record<string, unknown>;
     data?: { format?: string; doctype?: string; namespaces?: Record<string, unknown>; claims?: Record<string, unknown> };
   }>;
+  evidence?: { timestamp?: string; document_render?: DocumentRender; [k: string]: unknown };
   [k: string]: unknown;
 }
 

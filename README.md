@@ -19,7 +19,8 @@ navegador ──POST /api/start──▶ BFF ──init (v2, cuenta de servicio)
 wallet ── escanea el QR (o abre el deep link) y presenta la credencial ──▶ Blerify
    │
    └─ sondeo: GET /api/status?transactionId ──▶ BFF ──poll + verify (v2)──▶ Blerify
-                                          ◀── { status, credential: { valid, claims, validation } }
+                                          ◀── { status, credential: { valid, claims, validation,
+                                                                       documentImages? } }
 ```
 
 - **El BFF usa el flujo v2 autenticado** con una **cuenta de servicio** (OAuth2 `private_key_jwt`,
@@ -28,6 +29,11 @@ wallet ── escanea el QR (o abre el deep link) y presenta la credencial ─�
   firmado por los endpoints públicos y presenta ahí.
 - **No hay webhook**: el resultado se obtiene por **sondeo** (poll + verify en una sola llamada),
   correlacionado por `transaction_id`.
+- **Documento renderizado (nivel STANDARD)**: si la wallet entregó el render del documento por el
+  sideband de extensiones, el envelope v2 lo trae en `evidence.document_render` (`format`,
+  `redaction`, `images[{side: front|back, data: base64}]`). El BFF lo normaliza a
+  `credential.documentImages` (data: URIs) y el frontend pinta anverso y reverso. En verificaciones
+  BASIC el campo no viene y la sección no se muestra.
 - **Móvil (mismo dispositivo)**: si la página se abre desde un teléfono o tableta (user agent
   iOS/Android), en vez del QR se muestra el botón **«Abrir mi billetera»** con el mismo deep link
   que codifica el QR (enlace universal que abre la app de la wallet); un conmutador permite ver el

@@ -24,13 +24,18 @@ export function mockReady(createdAt: number): boolean {
   return Date.now() - createdAt >= MOCK_DELAY_MS;
 }
 
+// JPEG gris de 1×1 (se estira a tarjeta por CSS): placeholder de las imágenes del documento que
+// entrega la wallet en el sideband de extensiones (evidence.document_render, nivel STANDARD).
+const MOCK_DOC_JPEG_BASE64 =
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
+
 /** Resultado de verificación de ejemplo (misma forma que el envelope v2 poll+verify de Blerify). */
 export function mockResult(): Record<string, unknown> {
   return {
     status: 'COMPLETED',
     transaction_id: 'mock-tx',
-    assurance_level: 'BASIC',
-    effective_tier: 'BASIC',
+    assurance_level: 'STANDARD',
+    effective_tier: 'STANDARD',
     credentials: [
       {
         issuer: 'did:example:issuer (ejemplo)',
@@ -54,6 +59,17 @@ export function mockResult(): Record<string, unknown> {
         },
       },
     ],
-    evidence: { timestamp: '2026-01-01T00:00:00Z', note: 'Resultado SIMULADO — sin backend real' },
+    evidence: {
+      timestamp: '2026-01-01T00:00:00Z',
+      note: 'Resultado SIMULADO — sin backend real',
+      document_render: {
+        format: 'image/jpeg',
+        redaction: 'blur',
+        images: [
+          { side: 'front', data: MOCK_DOC_JPEG_BASE64 },
+          { side: 'back', data: MOCK_DOC_JPEG_BASE64 },
+        ],
+      },
+    },
   };
 }
