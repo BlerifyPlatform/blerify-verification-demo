@@ -226,10 +226,10 @@ export default function VerificationPanel({
   };
 
   const head = (
-    <div className="panel-head">
-      <span className="ph-icon"><SvgShield /></span>
+    <div className="signup-head">
+      <span className="si"><SvgShield /></span>
       <div>
-        <h2>{title}</h2>
+        <h3>{title}</h3>
         <p>{subtitle}</p>
       </div>
     </div>
@@ -241,90 +241,94 @@ export default function VerificationPanel({
     const v = c.validation ?? {};
     const claimKeys = Object.keys(c.claims ?? {});
     return (
-      <div className="panel">
-        <div className={`result-badge ${c.valid ? 'ok' : 'bad'}`}>{c.valid ? <SvgCheck /> : <SvgCross />}</div>
-        <h2 className="result-title">{c.valid ? 'Identidad verificada' : 'Credencial no válida'}</h2>
-        <p className="result-sub">
-          {c.valid
-            ? 'La credencial fue presentada y validada correctamente. Estos son los atributos revelados:'
-            : 'La credencial se presentó pero no superó la validación.'}
-        </p>
+      <div className="signup-card">
+        <div className="welcome">
+          <div className={`welcome-check${c.valid ? '' : ' bad'}`}>{c.valid ? <SvgCheck /> : <SvgCross />}</div>
+          <h3>{c.valid ? 'Identidad verificada' : 'Credencial no válida'}</h3>
+          <p className="sub">
+            {c.valid
+              ? 'La credencial fue presentada y validada correctamente. Estos son los atributos revelados:'
+              : 'La credencial se presentó pero no superó la validación.'}
+          </p>
 
-        {claimKeys.length > 0 && (
-          <div className="claims">
-            {claimKeys.map((k) => {
-              const img = imageDataUri(c.claims[k]);
-              return (
-                <div className="claim" key={k}>
-                  <div className="k">{label(k)}</div>
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="claim-img" src={img} alt={label(k)} />
-                  ) : (
-                    <div className="val">{formatValue(c.claims[k])}</div>
-                  )}
+          {claimKeys.length > 0 && (
+            <div className="profile-grid">
+              {claimKeys.map((k) => {
+                const img = imageDataUri(c.claims[k]);
+                return (
+                  <div className="pf" key={k}>
+                    <div className="k">{label(k)}</div>
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="claim-img" src={img} alt={label(k)} />
+                    ) : (
+                      <div className="v">{formatValue(c.claims[k])}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {(c.documentImages?.length ?? 0) > 0 && (
+            <div className="doc-render">
+              <div className="doc-render-title">Documento presentado</div>
+              {c.documentImages!.length > 1 ? (
+                // Anverso y reverso: una tarjeta que se voltea al tocarla.
+                <DocumentFlipCard
+                  frontSrc={c.documentImages![0].src}
+                  frontLabel={sideLabel(c.documentImages![0].side)}
+                  backSrc={c.documentImages![1].src}
+                  backLabel={sideLabel(c.documentImages![1].side)}
+                />
+              ) : (
+                <div className="doc-sides single">
+                  <figure className="doc-side">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={c.documentImages![0].src}
+                      alt={`${sideLabel(c.documentImages![0].side)} del documento presentado`}
+                    />
+                    <figcaption>{sideLabel(c.documentImages![0].side)}</figcaption>
+                  </figure>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+              {c.documentRedaction === 'blur' && (
+                <p className="doc-note">
+                  La billetera entregó estas imágenes con los datos sensibles difuminados.
+                </p>
+              )}
+            </div>
+          )}
 
-        {(c.documentImages?.length ?? 0) > 0 && (
-          <div className="doc-render">
-            <div className="doc-render-title">Documento presentado</div>
-            {c.documentImages!.length > 1 ? (
-              // Anverso y reverso: una tarjeta que se voltea al tocarla.
-              <DocumentFlipCard
-                frontSrc={c.documentImages![0].src}
-                frontLabel={sideLabel(c.documentImages![0].side)}
-                backSrc={c.documentImages![1].src}
-                backLabel={sideLabel(c.documentImages![1].side)}
-              />
-            ) : (
-              <div className="doc-sides single">
-                <figure className="doc-side">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.documentImages![0].src}
-                    alt={`${sideLabel(c.documentImages![0].side)} del documento presentado`}
-                  />
-                  <figcaption>{sideLabel(c.documentImages![0].side)}</figcaption>
-                </figure>
-              </div>
-            )}
-            {c.documentRedaction === 'blur' && (
-              <p className="doc-note">
-                La billetera entregó estas imágenes con los datos sensibles difuminados.
-              </p>
-            )}
+          <div className="checks">
+            {[
+              ['Firma criptográfica', v.signature_valid],
+              ['Emisor confiable', v.issuer_trusted],
+              ['Vínculo con el titular', v.holder_binding === 'VERIFIED' || v.holder_binding === true],
+              ['No revocada', v.revoked === false],
+              ['Vigente', v.expired === false],
+            ].map(([lbl, ok]) => (
+              <span className={`check ${ok ? 'y' : 'n'}`} key={String(lbl)}>
+                <SvgDot /> {lbl as string}
+              </span>
+            ))}
           </div>
-        )}
 
-        <div className="checks">
-          {[
-            ['Firma criptográfica', v.signature_valid],
-            ['Emisor confiable', v.issuer_trusted],
-            ['Vínculo con el titular', v.holder_binding === 'VERIFIED' || v.holder_binding === true],
-            ['No revocada', v.revoked === false],
-            ['Vigente', v.expired === false],
-          ].map(([lbl, ok]) => (
-            <span className={`check ${ok ? 'y' : 'n'}`} key={String(lbl)}>
-              <SvgDot /> {lbl as string}
-            </span>
-          ))}
+          {(c.issuer || c.format || c.docType) && (
+            <div className="meta-line">
+              {c.docType && <span>{c.docType}</span>}
+              {c.format && <span>{c.format}</span>}
+              {c.issuer && <span className="issuer">{c.issuer}</span>}
+            </div>
+          )}
+
+          <div className="welcome-actions">
+            <button type="button" className="btn btn-primary btn-block btn-lg" onClick={reset}>
+              Verificar otra credencial
+            </button>
+          </div>
         </div>
-
-        {(c.issuer || c.format || c.docType) && (
-          <div className="meta-line">
-            {c.docType && <span>{c.docType}</span>}
-            {c.format && <span>{c.format}</span>}
-            {c.issuer && <span className="issuer">{c.issuer}</span>}
-          </div>
-        )}
-
-        <button type="button" className="btn btn-primary btn-block btn-lg" onClick={reset}>
-          Verificar otra credencial
-        </button>
       </div>
     );
   }
@@ -336,7 +340,7 @@ export default function VerificationPanel({
     // detrás de un conmutador por si la billetera está en otro dispositivo.
     const sameDevice = isMobile && Boolean(link) && !showQr;
     return (
-      <div className="panel">
+      <div className="signup-card">
         {head}
         <div className="qr-stage">
           {sameDevice && link ? (
@@ -366,14 +370,14 @@ export default function VerificationPanel({
             </span>
           )}
           {isMobile && link && (
-            <button type="button" className="link-alt" onClick={() => setShowQr((s) => !s)}>
+            <button type="button" className="qr-alt" onClick={() => setShowQr((s) => !s)}>
               {showQr
                 ? 'Abrir la billetera en este dispositivo'
                 : '¿Tu billetera está en otro dispositivo? Mostrar código QR'}
             </button>
           )}
           {error && <div className="alert-err">{error}</div>}
-          <button type="button" className="btn btn-ghost" onClick={reset}>
+          <button type="button" className="btn btn-ghost on-light" onClick={reset}>
             Cancelar
           </button>
         </div>
@@ -383,7 +387,7 @@ export default function VerificationPanel({
 
   // ----- idle: inicio -----
   return (
-    <div className="panel">
+    <div className="signup-card">
       {head}
       <ul className="intro-list">
         <li><SvgDot /> Sin formularios ni fotos de tu documento</li>
