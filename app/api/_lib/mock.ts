@@ -60,6 +60,16 @@ export function mockResult(): Record<string, unknown> {
               issuing_country: 'SV',
               expiry_date: '2033-01-15',
             },
+            // El emisor añade en su propio namespace lo que su documento lleva de más. La regla
+            // incluye siempre `verificationProof` porque sin él no se puede consultar el registro
+            // de revocación; va aquí para que el mock se parezca al flujo real, donde llega y la
+            // extracción lo descarta antes de responder.
+            'sv.gob.rnpn.dui.1': {
+              verificationProof: {
+                did: 'did:lac1:1APfvvE7JGmiZh9qgk3wYXg6oCc7vPSoUg8sxXdt8uTvtF8Dyhmvhmn (ejemplo)',
+                domain: '1ZRSaNoumvGcWTXuNAYsUiHh9XN871g35qvA1Tjjj26MWgfipn2CN8m4fn3EXLV9 (ejemplo)',
+              },
+            },
           },
         },
       },
