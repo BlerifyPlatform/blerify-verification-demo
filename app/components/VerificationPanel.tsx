@@ -48,6 +48,16 @@ function label(key: string): string {
   return key.replace(/[_.]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Claims que la regla pide para poder verificar, no datos que la persona comparta. El DUI lleva
+// `verificationProof` ({did, domain}) en el namespace del emisor y la regla lo incluye siempre,
+// porque sin él no se puede consultar el registro de revocación. Llega en la respuesta —que es el
+// contrato y lo expone entero— pero esta pantalla enseña lo que se compartió, así que no se pinta.
+const CLAIMS_NO_MOSTRADOS = new Set(['verificationProof']);
+
+function esClaimDelTitular(key: string): boolean {
+  return !CLAIMS_NO_MOSTRADOS.has(key);
+}
+
 const SIDE_LABELS: Record<string, string> = { front: 'Anverso', back: 'Reverso' };
 
 function sideLabel(side: string): string {
@@ -239,7 +249,7 @@ export default function VerificationPanel({
   if (phase === 'result' && credential) {
     const c = credential;
     const v = c.validation ?? {};
-    const claimKeys = Object.keys(c.claims ?? {});
+    const claimKeys = Object.keys(c.claims ?? {}).filter(esClaimDelTitular);
     return (
       <div className="signup-card">
         <div className="welcome">

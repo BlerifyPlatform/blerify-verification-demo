@@ -18,22 +18,18 @@ export interface VerifiedCredential {
   documentRedaction?: string;
 }
 
-// Elementos que la regla pide para poder verificar, no datos que la persona comparta. El DUI lleva
-// `verificationProof` ({did, domain}) en su propio namespace y la regla lo incluye siempre, porque
-// sin él no se puede consultar el registro de revocación; pero es la instrucción que hace posible
-// la verificación, no un atributo del titular, y esta pantalla enseña lo que se compartió. Se queda
-// en el BFF: al frontend no llega.
-const CLAIMS_TECNICOS = new Set(['verificationProof']);
-
 // ISO mDL: los claims vienen por namespace (p.ej. {"org.iso.18013.5.1": {given_name, ...}}).
 // Los aplanamos para poder leerlos directo. W3C ya viene plano (== credentialSubject).
+//
+// No se descarta nada aquí: esta respuesta es el contrato que un integrador lee para saber qué
+// entrega la wallet, así que expone los claims tal cual llegaron. Qué se le enseña a una persona lo
+// decide la vista.
 function flattenClaims(claims: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(claims)) {
     if (v && typeof v === 'object' && !Array.isArray(v)) Object.assign(out, v as Record<string, unknown>);
     else out[k] = v;
   }
-  for (const k of CLAIMS_TECNICOS) delete out[k];
   return out;
 }
 
