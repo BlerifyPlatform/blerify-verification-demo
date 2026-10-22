@@ -90,12 +90,21 @@ function formatValue(key: string, value: unknown): string {
   return String(value);
 }
 
-// Some claims (e.g. `portrait`, `signature_usual_mark`) arrive as a hex-encoded image — an ISO mDL
-// byte string serialized to hex. Detect the image by its magic bytes and turn it into a data: URI so
-// it renders as a picture instead of a wall of hex. Returns null for anything that isn't such an image.
+// Some claims (e.g. `portrait`, `signature_usual_mark`) arrive as an image: an ISO mDL byte string
+// serialized to hex, or base64 when the backend re-encodes it, or an already formed data: URI. Detect
+// the image by its magic bytes and turn it into a data: URI so it renders as a picture instead of a
+// wall of text. Returns null for anything that isn't such an image.
 function imageDataUri(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const hex = value.trim().toLowerCase();
+  const raw = value.trim();
+  if (/^data:image\//i.test(raw)) return raw;
+  // base64: the first characters encode the magic bytes (JPEG ff d8 ff, PNG 89 50 4e 47, JP2 00 00 00 0c 6a 50).
+  if (raw.length >= 16 && /^[A-Za-z0-9+/]+={0,2}$/.test(raw)) {
+    if (raw.startsWith('/9j/')) return `data:image/jpeg;base64,${raw}`;
+    if (raw.startsWith('iVBORw0KGgo')) return `data:image/png;base64,${raw}`;
+    if (raw.startsWith('AAAADGpQICA')) return `data:image/jp2;base64,${raw}`;
+  }
+  const hex = raw.toLowerCase();
   if (hex.length < 8 || hex.length % 2 !== 0 || !/^[0-9a-f]+$/.test(hex)) return null;
   let mime: string | null = null;
   if (hex.startsWith('ffd8ff')) mime = 'image/jpeg';

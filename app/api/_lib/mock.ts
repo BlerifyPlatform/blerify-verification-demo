@@ -57,6 +57,9 @@ export function mockResult(): Record<string, unknown> {
               family_name: 'Lovelace',
               document_number: '000-000-000',
               birth_date: '1990-05-20',
+              // La wallet entrega la fotografía como la lleva el mDL: bytes de la imagen serializados en
+              // hex. El ejemplo reutiliza el anverso del documento ficticio.
+              portrait: Buffer.from(MOCK_DOC_JPEG_BASE64, 'base64').toString('hex'),
               sex: 2,
               issuing_country: 'SV',
               expiry_date: '2033-01-15',
