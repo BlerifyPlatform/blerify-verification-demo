@@ -57,6 +57,7 @@ export function mockResult(): Record<string, unknown> {
               family_name: 'Lovelace',
               document_number: '000-000-000',
               birth_date: '1990-05-20',
+              sex: 2,
               issuing_country: 'SV',
               expiry_date: '2033-01-15',
             },

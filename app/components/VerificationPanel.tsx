@@ -40,7 +40,16 @@ const LABELS: Record<string, string> = {
   document_number: 'Número de documento', birth_date: 'Fecha de nacimiento',
   issuing_country: 'País emisor', issuing_authority: 'Autoridad emisora',
   expiry_date: 'Fecha de expiración', issue_date: 'Fecha de emisión',
-  nationality: 'Nacionalidad', portrait: 'Fotografía', age_over_18: 'Mayor de edad',
+  nationality: 'Nacionalidad', portrait: 'Fotografía', age_over_18: 'Mayor de edad', sex: 'Sexo',
+};
+
+// `sex` viaja en el mDL como entero ISO/IEC 5218 (ver docs: dui-credential-fields → `sex`); a la
+// persona se le enseña la palabra, no el código.
+const SEX_LABELS: Record<string, string> = {
+  '0': 'No especificado',
+  '1': 'Masculino',
+  '2': 'Femenino',
+  '9': 'No aplica',
 };
 
 function label(key: string): string {
@@ -64,8 +73,12 @@ function sideLabel(side: string): string {
   return SIDE_LABELS[side] ?? label(side || 'documento');
 }
 
-function formatValue(value: unknown): string {
+function formatValue(key: string, value: unknown): string {
   if (value == null) return '—';
+  if (key === 'sex' && (typeof value === 'number' || typeof value === 'string')) {
+    const sex = SEX_LABELS[String(value).trim()];
+    if (sex) return sex;
+  }
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
   if (typeof value === 'string') {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -272,7 +285,7 @@ export default function VerificationPanel({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img className="claim-img" src={img} alt={label(k)} />
                     ) : (
-                      <div className="v">{formatValue(c.claims[k])}</div>
+                      <div className="v">{formatValue(k, c.claims[k])}</div>
                     )}
                   </div>
                 );
